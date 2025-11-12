@@ -100,7 +100,6 @@ def build_merkle(leaves):
             new_level.append(hash_pair(left, right))
         tree.append(new_level)
         level = new_level
-
     return tree
 
 
@@ -118,7 +117,7 @@ def prove_merkle(merkle_tree, random_indx):
     for level in range(len(merkle_tree) - 1):
         layer = merkle_tree[level]
         sibling_idx = idx + 1 if idx % 2 == 0 else idx - 1
-        if sibling_idx < len(layer):
+        if sibling_idx >= len(layer):
             sibling = layer[idx]
         else:
             sibling = layer[sibling_idx]
