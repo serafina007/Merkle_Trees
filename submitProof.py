@@ -119,7 +119,10 @@ def prove_merkle(merkle_tree, random_indx):
         layer = merkle_tree[level]
         sibling_idx = idx + 1 if idx % 2 == 0 else idx - 1
         if sibling_idx < len(layer):
-            merkle_proof.append(layer[sibling_idx])
+            sibling = layer[idx]
+        else:
+            sibling = layer[sibling_idx]
+        merkle_proof.append(sibling)
         idx //= 2
     return merkle_proof
 
