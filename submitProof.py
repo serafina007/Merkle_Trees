@@ -49,14 +49,14 @@ def generate_primes(num_primes):
 
     #TODO YOUR CODE HERE
     candidate = 2
-    while len(primes) < num_primes:
-      for p in primes:
+    while len(primes_list) < num_primes:
+      for p in primes_list:
         if p * p > candidate:
           break
         if candidate % p == 0:
           break
       else:
-        primes.append(candidate)
+        primes_list.append(candidate)
       candidate += 1
 
     return primes_list
