@@ -25,7 +25,7 @@ def merkle_assignment():
     tree = build_merkle(leaves)
 
     # Select a random leaf and create a proof for that leaf
-    random_leaf_index = 0 #TODO generate a random index from primes to claim (0 is already claimed)
+    random_leaf_index = random.randint(1, len(leaves) - 1) #TODO generate a random index from primes to claim (0 is already claimed)
     proof = prove_merkle(tree, random_leaf_index)
 
     # This is the same way the grader generates a challenge for sign_challenge()
@@ -59,7 +59,6 @@ def generate_primes(num_primes):
         primes.append(candidate)
       candidate += 1
 
-
     return primes_list
 
 
@@ -88,7 +87,17 @@ def build_merkle(leaves):
     """
 
     #TODO YOUR CODE HERE
-    tree = []
+    tree = [leaves]
+    level = leaves
+
+    while len(level) > 1:
+        new_level = []
+        for i in range(0, len(level), 2):
+            left = level[i]
+            right = level[i+1] if i+1 < len(level) else left
+            new_level.append(hash_pair(left, right))
+        tree.append(new_level)
+        level = new_level
 
     return tree
 
@@ -102,7 +111,14 @@ def prove_merkle(merkle_tree, random_indx):
     """
     merkle_proof = []
     # TODO YOUR CODE HERE
+    idx = random_indx
 
+    for level in range(len(merkle_tree) - 1):
+        layer = merkle_tree[level]
+        sibling_idx = idx + 1 if idx % 2 == 0 else idx - 1
+        if sibling_idx < len(layer):
+            proof.append(layer[sibling_idx])
+        idx //= 2
     return merkle_proof
 
 
@@ -120,7 +136,8 @@ def sign_challenge(challenge):
     eth_sk = acct.key
 
     # TODO YOUR CODE HERE
-    eth_sig_obj = 'placeholder'
+    eth_encoded_msg = eth_account.messages.encode_defunct(text=challenge)
+    eth_sig_obj = acct.sign_message(eth_encoded_msg)
 
     return addr, eth_sig_obj.signature.hex()
 
@@ -138,7 +155,16 @@ def send_signed_msg(proof, random_leaf):
     w3 = connect_to(chain)
 
     # TODO YOUR CODE HERE
-    tx_hash = 'placeholder'
+    contract = w3.eth.contract(address=address, abi=abi)
+    tx_hash = contract.functions.submit(random_leaf, proof).build_transaction({
+        'from': acct.address,
+        'nonce': w3.eth.get_transaction_count(acct.address),
+        'gas': 500000,
+        'gasPrice': w3.to_wei('10', 'gwei'),
+    })
+
+    signed_tx = w3.eth.account.sign_transcation(tx, private_key=acct.key)
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
 
     return tx_hash
 
