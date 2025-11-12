@@ -53,7 +53,7 @@ def generate_primes(num_primes):
       for p in primes:
         if p * p > candidate:
           break
-        if candidate % p == 0
+        if candidate % p == 0:
           break
       else:
         primes.append(candidate)
