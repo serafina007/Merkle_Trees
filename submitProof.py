@@ -72,7 +72,7 @@ def convert_leaves(primes_list):
     leaves = []
     for p in primes_list:
       pb = p.to_bytes((p.bit_length()+7) // 8, 'big')
-      leaf = Web3.solidity_keccak(['bytes;], [pb])
+      leaf = Web3.solidity_keccak(['bytes'], [pb])
       leaves.append(leaf)
 
     return leaves
