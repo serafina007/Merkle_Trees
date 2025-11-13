@@ -25,7 +25,7 @@ def merkle_assignment():
     tree = build_merkle(leaves)
 
     # Select a random leaf and create a proof for that leaf
-    random_leaf_index = random.randint(1, len(leaves) - 1) #TODO generate a random index from primes to claim (0 is already claimed)
+    random_leaf_index = random.randint(1, num_of_primes - 1) #TODO generate a random index from primes to claim (0 is already claimed)
     proof = prove_merkle(tree, random_leaf_index)
 
     # This is the same way the grader generates a challenge for sign_challenge()
@@ -38,6 +38,10 @@ def merkle_assignment():
         # TODO, when you are ready to attempt to claim a prime (and pay gas fees),
         #  complete this method and run your code with the following line un-commented
         # tx_hash = send_signed_msg(proof, leaves[random_leaf_index])
+        print("Prepared proof for leaf index:", random_leaf_index)
+        print("Proof length:", len(proof))
+        print("Address:", addr)
+        print("Signature:", sig)
 
 
 def generate_primes(num_primes):
@@ -73,10 +77,8 @@ def convert_leaves(primes_list):
     # TODO YOUR CODE HERE
     leaves = []
     for p in primes_list:
-      pb = p.to_bytes((p.bit_length()+7) // 8, 'big')
-      leaf = Web3.solidity_keccak(['bytes'], [pb])
-      leaves.append(leaf)
-
+      b = p.to_bytes(32, byteorder='big')
+      leaves.append(b)
     return leaves
 
 
@@ -89,17 +91,25 @@ def build_merkle(leaves):
     """
 
     #TODO YOUR CODE HERE
-    tree = [leaves]
-    level = leaves
+    tree = []
+    if not leaves:
+        return tree
 
-    while len(level) > 1:
-        new_level = []
-        for i in range(0, len(level), 2):
-            left = level[i]
-            right = level[i+1] if i+1 < len(level) else left
-            new_level.append(hash_pair(left, right))
-        tree.append(new_level)
-        level = new_level
+    current_level = list(leaves)
+    tree.append(current_level)
+
+    while len(current_level) > 1:
+        next_level = []
+        if len(current_level) % 2 == 1:
+            current_level = current_level + [current_level[-1]]
+        for i in range(0, len(current_level), 2):
+            a = current_level[i]
+            b = current_level[i + 1]
+            hashed = hash_pair(a, b)
+            next_level.append(hashed)
+        tree.append(next_level)
+        current_level = next_level
+
     return tree
 
 
@@ -112,17 +122,24 @@ def prove_merkle(merkle_tree, random_indx):
     """
     merkle_proof = []
     # TODO YOUR CODE HERE
-    idx = random_indx
+    if not merkle_tree or random_indx < 0 or random_indx >= len(merkle_tree[0]):
+        return merkle_proof
 
-    for level in range(len(merkle_tree) - 1):
-        layer = merkle_tree[level]
-        sibling_idx = idx + 1 if idx % 2 == 0 else idx - 1
-        if sibling_idx >= len(layer):
-            sibling = layer[idx]
+    index = random_indx
+    for level in range(0, len(merkle_tree) - 1):
+        level_list = merkle_tree[level]
+        sibling_index = None
+        if index % 2 == 0:
+            sibling_index = index + 1
+            if sibling_index >= len(level_list):
+                sibling_index = index  # duplicated last node
         else:
-            sibling = layer[sibling_idx]
-        merkle_proof.append(sibling)
-        idx //= 2
+            sibling_index = index - 1
+
+        merkle_proof.append(level_list[sibling_index])
+
+        index = index // 2
+
     return merkle_proof
 
 
@@ -141,9 +158,9 @@ def sign_challenge(challenge):
 
     # TODO YOUR CODE HERE
     eth_encoded_msg = eth_account.messages.encode_defunct(text=challenge)
-    eth_sig_obj = acct.sign_message(eth_encoded_msg)
-
-    return addr, eth_sig_obj.signature.hex()
+    signed = acct.sign_message(eth_encoded_msg)
+    signature_hex = signed.signature.hex()
+    return addr, signature_hex
 
 
 def send_signed_msg(proof, random_leaf):
@@ -159,7 +176,7 @@ def send_signed_msg(proof, random_leaf):
     w3 = connect_to(chain)
 
     # TODO YOUR CODE HERE
-    contract = w3.eth.contract(address=address, abi=abi)
+    contract = w3.eth.contract(address=Web3.to_checksum_address(address), abi=abi)
     tx = contract.functions.submit(proof, random_leaf).build_transaction({
         'from': acct.address,
         'nonce': w3.eth.get_transaction_count(acct.address),
