@@ -154,7 +154,7 @@ def sign_challenge(challenge):
     acct = get_account()
 
     addr = acct.address
-    eth_sk = acct.key
+    #eth_sk = acct.key
 
     # TODO YOUR CODE HERE
     eth_encoded_msg = eth_account.messages.encode_defunct(text=challenge)
